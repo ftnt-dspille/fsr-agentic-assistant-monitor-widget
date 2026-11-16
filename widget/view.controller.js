@@ -3,7 +3,7 @@
    Copyright (c) 2026 Fortinet Inc
    Copyright end */
 "use strict";
-// VIEW controller. Resolved as `agenticAssistantMonitor110DevCtrl` for v1.0.0.
+// VIEW controller. Resolved as `agenticAssistantMonitor111DevCtrl` for v1.0.0.
 (function () {
   // Tab bodies live in widgetAssets/html/*.html and are ng-included by
   // view.html. The folder this controller was served from is the folder the
@@ -18,11 +18,11 @@
   })();
   angular
     .module("cybersponse")
-    .controller("agenticAssistantMonitor110DevCtrl", agenticAssistantMonitor110DevCtrl);
+    .controller("agenticAssistantMonitor111DevCtrl", agenticAssistantMonitor111DevCtrl);
 
-  agenticAssistantMonitor110DevCtrl.$inject = ["$scope", "config", "$interval", "$timeout", "$q", "$injector", "fsrMonitorAgentService"];
+  agenticAssistantMonitor111DevCtrl.$inject = ["$scope", "config", "$interval", "$timeout", "$q", "$injector", "fsrMonitorAgentService"];
 
-  function agenticAssistantMonitor110DevCtrl($scope, config, $interval, $timeout, $q, $injector, fsrMonitorAgentService) {
+  function agenticAssistantMonitor111DevCtrl($scope, config, $interval, $timeout, $q, $injector, fsrMonitorAgentService) {
     $scope.tpl = function (name) { return WIDGET_BASE + "widgetAssets/html/" + name + ".html"; };
 
     var defaults = { title: "Agentic Assistant Monitor", range: "7d", refreshSecs: 60 };
