@@ -1,0 +1,96 @@
+<!-- Copyright start
+   MIT License
+   Copyright (c) 2026 Fortinet Inc
+   Copyright end -->
+<div class="sm-hunts" data-testid="sm-hunts">
+  <div class="sm-hunt-bar">
+    <div class="sm-hunt-note">A hunt asks its question on a schedule. A confirmed or suspicious result opens a case; any containment still waits for an analyst.</div>
+    <button type="button" class="sm-btn primary" ng-click="newHunt()" ng-disabled="huntForm" data-testid="sm-hunt-new"><i class="ic ic-sparkle" aria-hidden="true"></i>New hunt</button>
+  </div>
+
+  <form class="sm-hunt-form" ng-if="huntForm" ng-submit="saveHunt()" data-testid="sm-hunt-form" novalidate>
+    <div class="sm-pb-field">
+      <label class="sm-pb-label" for="sm-hunt-name">Name</label>
+      <input id="sm-hunt-name" type="text" ng-model="huntForm.name" ng-disabled="huntForm.editing" maxlength="120" data-testid="sm-hunt-name">
+    </div>
+    <div class="sm-pb-field">
+      <label class="sm-pb-label" for="sm-hunt-question">What to hunt for</label>
+      <textarea id="sm-hunt-question" ng-model="huntForm.question" placeholder="Any host talking to a known command-and-control address in the last hour" data-testid="sm-hunt-question"></textarea>
+    </div>
+    <div class="sm-hunt-row">
+      <div class="sm-pb-field">
+        <label class="sm-pb-label" for="sm-hunt-schedule">Schedule</label>
+        <select id="sm-hunt-schedule" ng-model="huntForm.schedule" ng-options="s.key as s.label for s in HUNT_SCHEDULES" data-testid="sm-hunt-schedule"></select>
+      </div>
+      <div class="sm-pb-field" ng-if="huntForm.schedule === 'custom'">
+        <label class="sm-pb-label" for="sm-hunt-cron">Schedule expression (minute hour day month weekday)</label>
+        <input id="sm-hunt-cron" type="text" ng-model="huntForm.cron" placeholder="*/30 * * * *" data-testid="sm-hunt-cron">
+      </div>
+      <div class="sm-pb-field">
+        <label class="sm-pb-label" for="sm-hunt-module">A finding opens</label>
+        <select id="sm-hunt-module" ng-model="huntForm.module" ng-options="m.key as m.label for m in HUNT_MODULES" data-testid="sm-hunt-module"></select>
+      </div>
+    </div>
+    <div class="sm-policy-error" role="alert" ng-if="huntForm.error" data-testid="sm-hunt-error">{{huntForm.error}}</div>
+    <div class="sm-policy-actions">
+      <button type="submit" class="sm-btn primary" ng-disabled="!huntFormValid() || huntForm.saving" data-testid="sm-hunt-save">{{huntForm.saving ? 'Saving' : 'Save hunt'}}</button>
+      <button type="button" class="sm-btn" ng-click="cancelHunt()" data-testid="sm-hunt-cancel">Cancel</button>
+    </div>
+  </form>
+
+  <div class="sm-empty" ng-if="isPanelLoading('hunts')" data-testid="sm-hunts-loading">
+    <span class="sm-spinner"></span>
+    Loading scheduled hunts...
+  </div>
+  <div class="sm-empty" ng-if="panelFailed.hunts && !isPanelLoading('hunts')" data-testid="sm-hunts-failed">
+    {{panelFailed.hunts}} Refresh to try again.
+  </div>
+  <div class="sm-empty" ng-if="isPanelEmpty('hunts', hunts)" data-testid="sm-hunts-empty">
+    <i class="ic ic-calendar sm-empty-icon" aria-hidden="true"></i>
+    No scheduled hunts yet
+  </div>
+
+  <div class="sm-table-wrap" ng-if="hunts.length" data-testid="sm-hunts-table">
+    <table>
+      <thead><tr><th>Hunt</th><th>Schedule</th><th>Last run</th><th>Outcome</th><th>Findings</th><th></th></tr></thead>
+      <tbody>
+        <tr ng-repeat="h in hunts track by h.name" data-testid="sm-hunt-row">
+          <td>
+            <div class="sm-hunt-name" data-testid="sm-hunt-row-name">{{h.name}}</div>
+            <div class="sm-hunt-question" data-testid="sm-hunt-row-question">{{h.question}}</div>
+          </td>
+          <td>
+            <span data-testid="sm-hunt-row-schedule">{{h.schedule_label}}</span>
+            <span class="sm-badge paused" ng-if="!h.enabled" data-testid="sm-hunt-row-paused">Paused</span>
+          </td>
+          <td data-testid="sm-hunt-row-last">{{huntLastRun(h)}}</td>
+          <td>
+            <span class="sm-badge" ng-class="huntOutcomeClass(h)" ng-if="h.last_outcome" data-testid="sm-hunt-row-outcome">{{h.last_outcome_label}}</span>
+            <span ng-if="!h.last_outcome" data-testid="sm-hunt-row-outcome">-</span>
+            <div class="sm-hunt-summary" ng-if="h.last_summary" data-testid="sm-hunt-row-summary">{{h.last_summary}}</div>
+          </td>
+          <td>
+            <a class="sm-hunt-link" ng-if="huntCaseHref(h)" ng-href="{{huntCaseHref(h)}}" target="_blank" rel="noopener" data-testid="sm-hunt-row-case">Open case</a>
+            <span ng-if="!huntCaseHref(h)" data-testid="sm-hunt-row-nocase">None</span>
+          </td>
+          <td>
+            <div class="sm-row-actions" ng-if="huntDeleting !== h.name">
+              <button type="button" class="sm-btn" ng-click="runHuntNow(h)" ng-disabled="runStateFor('hunt:' + h.name).state === 'running'" data-testid="sm-hunt-run"><i class="ic ic-play" aria-hidden="true"></i>{{runStateFor('hunt:' + h.name).state === 'running' ? 'Starting' : 'Run now'}}</button>
+              <button type="button" class="sm-btn" ng-click="editHunt(h)" data-testid="sm-hunt-edit">Edit</button>
+              <button type="button" class="sm-btn" ng-click="toggleHunt(h)" data-testid="sm-hunt-toggle"><i class="ic ic-pause" aria-hidden="true" ng-if="h.enabled"></i>{{h.enabled ? 'Pause' : 'Resume'}}</button>
+              <button type="button" class="sm-btn" ng-click="askDeleteHunt(h)" data-testid="sm-hunt-delete">Delete</button>
+            </div>
+            <div class="sm-hunt-confirm" ng-if="huntDeleting === h.name" data-testid="sm-hunt-confirm">
+              Delete this hunt and its history?
+              <button type="button" class="sm-btn" ng-click="deleteHunt(h)" data-testid="sm-hunt-delete-yes">Delete</button>
+              <button type="button" class="sm-btn" ng-click="cancelDeleteHunt()" data-testid="sm-hunt-delete-no">Keep</button>
+            </div>
+            <span class="sm-run-result" ng-if="runStateFor('hunt:' + h.name)" ng-class="runStateFor('hunt:' + h.name).state"
+                  title="{{runStateFor('hunt:' + h.name).message}}" data-testid="sm-hunt-run-result">{{runStateFor('hunt:' + h.name).state === 'ok' ? 'Started' : (runStateFor('hunt:' + h.name).state === 'error' ? 'Failed' : '')}}</span>
+            <div class="sm-q-err" ng-if="huntRowError[h.name]" role="alert" data-testid="sm-hunt-row-error">{{huntRowError[h.name]}}</div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

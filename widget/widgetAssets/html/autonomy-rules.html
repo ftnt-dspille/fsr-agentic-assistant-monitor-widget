@@ -1,0 +1,56 @@
+<!-- Copyright start
+   MIT License
+   Copyright (c) 2026 Fortinet Inc
+   Copyright end -->
+<div class="sm-policy-rules" ng-if="policyView.state === 'ready'" data-testid="sm-policy-rules">
+  <div class="sm-section-title">Is each rule ready to act on its own?</div>
+  <div class="sm-pending-meta" data-testid="sm-policy-mode">{{policyModeText()}}</div>
+  <div class="sm-pending-meta" ng-if="policyView.thresholds" data-testid="sm-policy-bar">{{readyBar()}}</div>
+  <div class="sm-empty" ng-if="!policyView.rules.length" data-testid="sm-policy-norules">No rule has made a decision in this window yet.</div>
+  <div class="sm-pr-item" ng-repeat="r in policyView.rules track by r.rule_id" ng-class="{open: isRuleOpen(r)}" data-testid="sm-policy-rule">
+    <div class="sm-pr-row">
+      <div class="sm-pr-name">
+        <span data-testid="sm-policy-rule-name">{{ruleName(r)}}</span>
+        <span class="sm-pending-meta sm-mono" ng-if="r.label && r.label !== r.rule_id" data-testid="sm-policy-rule-id">{{r.rule_id}}</span>
+      </div>
+      <div class="sm-pr-state">
+        <span class="sm-badge" ng-class="r.ready ? 'on' : 'waiting'" data-testid="sm-policy-badge"><i class="ic" ng-class="r.ready ? 'ic-check' : 'ic-clock'" aria-hidden="true"></i>{{r.ready ? 'Ready to enforce' : 'Not ready yet'}}</span>
+      </div>
+      <div class="sm-pr-nums" data-testid="sm-policy-numbers">{{ruleNumbers(r)}}</div>
+      <div class="sm-pr-go">
+        <button type="button" class="sm-btn" ng-click="openRuleDrawer(r)" aria-expanded="{{isRuleOpen(r)}}" data-testid="sm-policy-open">{{isRuleOpen(r) ? 'Hide decisions' : 'Show decisions'}}</button>
+      </div>
+    </div>
+    <ul class="sm-pr-blockers" ng-if="!r.ready && r.blockers.length" data-testid="sm-policy-blockers">
+      <li ng-repeat="b in r.blockers track by $index" data-testid="sm-policy-blocker">{{b}}</li>
+    </ul>
+
+    <div class="sm-pr-drawer" ng-if="isRuleOpen(r)" role="region" aria-label="Recent decisions for this rule" data-testid="sm-policy-drawer">
+      <div class="sm-pr-drawer-head">
+        <span class="sm-section-title">Recent decisions for {{ruleName(r)}}</span>
+        <button type="button" class="sm-btn" ng-click="closeRuleDrawer()" data-testid="sm-policy-drawer-close"><i class="ic ic-x" aria-hidden="true"></i>Close</button>
+      </div>
+      <div class="sm-pending-meta" ng-if="ruleDrawer.loading" data-testid="sm-policy-drawer-loading"><span class="sm-spinner"></span> Loading decisions...</div>
+      <div class="sm-q-err" ng-if="ruleDrawer.failed" data-testid="sm-policy-drawer-failed">{{ruleDrawer.failed}}</div>
+      <div class="sm-pending-meta" ng-if="!ruleDrawer.loading && !ruleDrawer.failed && !ruleDrawer.rows.length" data-testid="sm-policy-drawer-empty">This rule has no recent decisions.</div>
+      <div class="sm-pr-dec" ng-repeat="d in ruleDrawer.rows track by (d.session_id + '/' + d.record_iri)" data-testid="sm-policy-decision">
+        <div class="sm-pr-dec-head">
+          <a ng-if="recordHref(d)" ng-href="{{recordHref(d)}}" target="_blank" rel="noopener" data-testid="sm-policy-decision-case">{{d.record_name}}</a>
+          <span ng-if="!recordHref(d)" data-testid="sm-policy-decision-case">{{d.record_name}}</span>
+          <span class="sm-pending-meta" data-testid="sm-policy-decision-when">{{queueAgo(d)}}</span>
+        </div>
+        <div class="sm-pr-dec-line"><span class="sm-q-k">Verdict</span><b data-testid="sm-policy-decision-verdict">{{d.verdict || '-'}}</b>
+          <span data-testid="sm-policy-decision-conf">{{confText(d)}}</span></div>
+        <div class="sm-pr-dec-line"><span class="sm-q-k">Checked</span><span data-testid="sm-policy-decision-sources">{{sourcesText(d)}}</span></div>
+        <ul ng-if="d.reasons.length"><li ng-repeat="why in d.reasons track by $index" data-testid="sm-policy-decision-reason">{{why}}</li></ul>
+        <div class="sm-pr-dec-line"><span class="sm-q-k">Action</span><span data-testid="sm-policy-decision-action">{{d.action}}</span>
+          <span class="sm-pending-meta" data-testid="sm-policy-decision-kind">{{actionKindLabel(d)}}</span></div>
+        <div class="sm-pending-meta" ng-if="queueUndoState(d).state === 'done'" data-testid="sm-policy-decision-undone">Undone</div>
+        <div class="sm-q-err" ng-if="queueUndoState(d).state === 'failed' || queueUndoState(d).state === 'taken'" data-testid="sm-policy-decision-undo-error">{{queueUndoState(d).message}}</div>
+        <div class="sm-q-actions" ng-if="canQueueUndo(d)">
+          <button type="button" class="sm-btn" ng-click="drawerUndo(d)" data-testid="sm-policy-decision-undo">Undo</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,83 @@
+<!-- Copyright start
+   MIT License
+   Copyright (c) 2026 Fortinet Inc
+   Copyright end -->
+<div class="sm-overlay" ng-if="turnDetail" data-testid="sm-turn-detail-overlay">
+  <div class="sm-overlay-card">
+    <div class="sm-overlay-header">
+      <span class="sm-overlay-title">Turn Detail</span>
+      <button class="sm-overlay-close" ng-click="closeTurnDetail()" aria-label="Close" data-testid="sm-turn-detail-close"><i class="ic ic-x" aria-hidden="true"></i></button>
+    </div>
+    <div class="sm-overlay-body">
+      <!-- User prompt -->
+      <div class="sm-td-section" ng-if="turnDetail.prompt">
+        <div class="sm-td-label">User Prompt</div>
+        <div class="sm-td-prompt">{{turnDetail.prompt}}</div>
+      </div>
+      <!-- Agent thinking (extended-thinking models; usually empty) -->
+      <div class="sm-td-section" ng-if="turnDetail.agent_thinking">
+        <div class="sm-td-label">Agent Thinking</div>
+        <div class="sm-td-thinking">{{turnDetail.agent_thinking}}</div>
+      </div>
+      <!-- Tool call chain (reuses Phase 1 data) -->
+      <!-- A vertical timeline, not a table. The 6-column grid gave the two
+           payload columns ~30% of the width each while #/status/latency ate
+           the rest, so params wrapped into a narrow ribbon and the result
+           was clipped to a single line. Each call is now a card: the
+           scannable metadata on one header row, the payloads full-width
+           beneath it. -->
+      <div class="sm-td-section" ng-if="toolCallCount(turnDetail)">
+        <div class="sm-td-label">Tool Calls ({{toolCallCount(turnDetail)}})</div>
+        <ol class="sm-tc-list">
+          <li class="sm-tc" ng-repeat="tc in turnDetail.tool_call_detail track by tc.index"
+              data-testid="sm-td-toolcall">
+            <div class="sm-tc-head">
+              <span class="sm-tc-idx">{{$index + 1}}</span>
+              <span class="sm-tc-name sm-mono">{{tc.tool_name}}</span>
+              <span class="sm-badge" ng-class="toolCallStatusClass(tc.result_status)">{{tc.result_status}}</span>
+              <span class="sm-tc-latency sm-mono">{{toolCallLatency(tc.latency_ms)}}</span>
+            </div>
+            <div class="sm-tc-body">
+              <div class="sm-tc-field">
+                <div class="sm-tc-field-label">Params</div>
+                <pre class="sm-tc-blob"
+                     ng-class="{clipped: isLongBlob(toolCallParams(tc)) && !toolBlobOpen(tc, 'params')}"
+                     data-testid="sm-td-params">{{toolCallParams(tc)}}</pre>
+                <button class="sm-tc-more" ng-if="isLongBlob(toolCallParams(tc))"
+                        ng-click="toggleToolBlob(tc, 'params')"
+                        data-testid="sm-td-params-more">{{toolBlobOpen(tc, 'params') ? 'Show less' : 'Show more'}}</button>
+              </div>
+              <div class="sm-tc-field">
+                <div class="sm-tc-field-label">Result</div>
+                <pre class="sm-tc-blob"
+                     ng-class="{clipped: isLongBlob(toolCallResult(tc)) && !toolBlobOpen(tc, 'result')}"
+                     data-testid="sm-td-result">{{toolCallResult(tc)}}</pre>
+                <button class="sm-tc-more" ng-if="isLongBlob(toolCallResult(tc))"
+                        ng-click="toggleToolBlob(tc, 'result')"
+                        data-testid="sm-td-result-more">{{toolBlobOpen(tc, 'result') ? 'Show less' : 'Show more'}}</button>
+              </div>
+            </div>
+          </li>
+        </ol>
+      </div>
+      <!-- HITL approval gates -->
+      <div class="sm-td-section" ng-if="turnDetail.approvals_count > 0">
+        <div class="sm-td-label">Approval Gates</div>
+        <div><span class="sm-badge waiting">{{turnDetail.approvals_count}} approval{{turnDetail.approvals_count === 1 ? "" : "s"}}</span></div>
+      </div>
+      <!-- Final agent response -->
+      <div class="sm-td-section" ng-if="turnDetail.response">
+        <div class="sm-td-label">Agent Response</div>
+        <div class="sm-td-response">{{turnDetail.response}}</div>
+      </div>
+      <!-- Meta -->
+      <div class="sm-td-meta">
+        <span class="sm-mono">{{turnDetail.ts | date:'MMM d, y HH:mm:ss'}}</span>
+        <span class="sm-badge" ng-class="turnDetail.intent">{{turnDetail.intent}}</span>
+        <span class="sm-mono">{{turnDetail.model || '--'}}</span>
+        <span>{{(turnDetail.input_tokens || 0) + (turnDetail.output_tokens || 0) | number}} tokens</span>
+        <span>${{(turnDetail.cost_usd || 0) | number:4}}</span>
+        <span class="sm-badge" ng-class="turnDetail.status">{{turnDetail.status}}</span>
+      </div>
+    </div>
+  </div>

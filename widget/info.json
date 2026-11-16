@@ -1,0 +1,34 @@
+{
+  "name": "agenticAssistantMonitor",
+  "title": "Agentic Assistant Monitor",
+  "subTitle": "Approvals, live sessions, usage and cost, autonomy policy, and audit trail for the Agentic Assistant.",
+  "version": "1.1.0",
+  "published_date": 1753920000,
+  "releaseNotes": "Initial release: usage/tokens/cost over time, pending HITL tasks, scheduled-task status, per-user activity, and an auditable LLM-call trail.",
+  "development": true,
+  "metadata": {
+    "description": "Monitor for the Agentic Assistant. Charts usage, tokens, and cost over time; shows the approval queue (including records auto-triage escalated for review), live chat sessions, scheduled tasks, and per-user activity; lets a reviewer read and edit the autonomy policy and see what it would have done against what reviewers decided; and offers a searchable audit trail of every model call. All data and actions go through the Agentic Assistant connector.",
+    "publisher": "Fortinet Inc",
+    "certified": "No",
+    "compatibility": [
+      "7.6.5"
+    ],
+    "snapshots": [],
+    "category": [
+      "Utilities"
+    ],
+    "pages": [
+      "Dashboard",
+      "View Panel"
+    ],
+    "standalone": true,
+    "windowClass": "Full Width",
+    "size": "lg",
+    "view": {
+      "popup": "custom",
+      "draggable": true,
+      "activeBackground": true,
+      "enableFor": []
+    }
+  }
+}

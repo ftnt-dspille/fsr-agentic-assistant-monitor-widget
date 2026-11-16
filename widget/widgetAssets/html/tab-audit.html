@@ -1,0 +1,90 @@
+<!-- Copyright start
+   MIT License
+   Copyright (c) 2026 Fortinet Inc
+   Copyright end -->
+  <div class="sm-shift-bar" data-testid="sm-audit-export">
+    <div class="sm-shift-actions">
+      <select class="sm-q-window" ng-model="auditExport.hours" ng-options="w.hours as w.label for w in AUDIT_EXPORT_WINDOWS"
+              aria-label="Export window" data-testid="sm-audit-export-window"></select>
+      <select class="sm-q-window" ng-model="auditExport.format" ng-options="f.id as f.label for f in AUDIT_EXPORT_FORMATS"
+              aria-label="Export format" data-testid="sm-audit-export-format"></select>
+      <button type="button" class="sm-btn" ng-click="exportAudit()" ng-disabled="auditExport.busy" data-testid="sm-audit-export-btn"><i class="ic ic-arrow" aria-hidden="true"></i>Export audit</button>
+      <span class="sm-hunt-note" ng-if="auditExport.notice" role="status" data-testid="sm-audit-export-notice">{{auditExport.notice}}</span>
+    </div>
+  </div>
+  <div class="sm-audit-toolbar" ng-if="audit.length" data-testid="sm-audit-toolbar">
+    <div class="sm-search">
+      <i class="ic ic-search sm-search-icon" aria-hidden="true"></i>
+      <input type="search" class="sm-search-input" ng-model="search.audit"
+             ng-model-options="{debounce: 150}"
+             placeholder="Search prompts, users, models, tools..."
+             aria-label="Search audit trail" data-testid="sm-audit-search">
+      <button class="sm-search-clear" ng-if="search.audit" ng-click="clearAuditQuery()"
+              aria-label="Clear search" data-testid="sm-audit-search-clear"><i class="ic ic-x" aria-hidden="true"></i></button>
+    </div>
+    <div class="sm-search-count" data-testid="sm-audit-count">
+      {{filteredAudit().length}} of {{audit.length}}
+      <span class="sm-search-note" ng-if="auditTruncated()"
+            title="Only the most recent {{AUDIT_LIMIT}} turns in this range are loaded; narrow the time range to search further back."
+            data-testid="sm-audit-truncated">· newest {{AUDIT_LIMIT}} only</span>
+    </div>
+  </div>
+  <div class="sm-empty" ng-if="isPanelLoading('audit')" data-testid="sm-audit-loading">
+    <span class="sm-spinner"></span>
+    Loading audit trail...
+  </div>
+  <div class="sm-empty" ng-if="panelFailed.audit && !isPanelLoading('audit')" data-testid="sm-audit-failed">
+    Could not load the audit trail. Refresh to try again.
+  </div>
+  <div class="sm-empty" ng-if="isPanelEmpty('audit', audit)" data-testid="sm-audit-empty">
+    <i class="ic ic-list sm-empty-icon" aria-hidden="true"></i>
+    No LLM calls recorded yet
+  </div>
+  <div class="sm-empty" ng-if="!isPanelLoading('audit') && audit.length && !filteredAudit().length" data-testid="sm-audit-no-match">
+    <i class="ic ic-search sm-empty-icon" aria-hidden="true"></i>
+    No turns match “{{search.audit}}”
+    <div><button class="sm-btn" ng-click="clearAuditQuery()"
+                data-testid="sm-audit-clear-search">Clear search</button></div>
+  </div>
+  <div class="sm-table-wrap" ng-if="filteredAudit().length" data-testid="sm-audit-table">
+    <table>
+      <thead><tr><th></th><th>Time</th><th>User</th><th>Model</th><th>Intent</th><th class="sm-num">Tokens</th><th class="sm-num">Cost</th><th>Status</th><th>Tools</th><th>Prompt</th><th></th></tr></thead>
+      <tbody>
+        <tr ng-repeat-start="a in filteredAudit() track by $index" data-testid="sm-audit-row" ng-class="{'sm-audit-expanded': a._expanded}">
+          <td><button class="sm-expand-btn" ng-click="toggleAuditRow(a)" ng-if="toolCallCount(a)" data-testid="sm-audit-expand" aria-label="Toggle tool calls"><i class="ic ic-chevron" ng-class="{open: a._expanded}" aria-hidden="true"></i></button></td>
+          <td class="sm-mono">{{a.ts | date:'MMM d, y HH:mm:ss'}}</td>
+          <td>{{a.user_name || a.user_iri || '--'}}</td>
+          <td class="sm-mono">{{a.model || '--'}}</td>
+          <td><span class="sm-badge sm-badge-clickable" ng-class="a.intent" ng-click="toggleFilter('intent', a.intent)" ng-if="a.intent" data-testid="sm-audit-intent">{{a.intent}}</span><span ng-if="!a.intent">--</span></td>
+          <td class="sm-num">{{(a.input_tokens || 0) + (a.output_tokens || 0) | number}}</td>
+          <td class="sm-num">${{(a.cost_usd || 0) | number:4}}</td>
+          <td><span class="sm-badge sm-badge-clickable" ng-class="a.status" ng-click="toggleFilter('status', a.status)" data-testid="sm-audit-status">{{a.status}}</span></td>
+          <td><span class="sm-badge" ng-if="toolCallCount(a)" data-testid="sm-audit-toolcount">{{toolCallCount(a)}}</span><span ng-if="!toolCallCount(a)">--</span></td>
+          <td class="sm-truncate" title="{{a.prompt}}">{{a.prompt || '--'}}</td>
+          <td><button class="sm-btn" ng-click="showTurnDetail(a)" data-testid="sm-audit-detail-btn">Detail</button></td>
+        </tr>
+        <!-- Expandable per-tool-call chain (§10.1): the full tool sequence
+             for this LLM round-trip -- name, params, status, latency, result. -->
+        <tr ng-repeat-end ng-if="a._expanded && toolCallCount(a)" class="sm-audit-detail" data-testid="sm-audit-detail">
+          <td colspan="11">
+            <div class="sm-toolchain">
+              <div class="sm-toolchain-head">Tool calls in this turn</div>
+              <table class="sm-toolchain-table">
+                <thead><tr><th>#</th><th>Tool</th><th>Status</th><th>Latency</th><th>Params</th><th>Result</th></tr></thead>
+                <tbody>
+                  <tr ng-repeat="tc in a.tool_call_detail track by tc.index" data-testid="sm-audit-tool">
+                    <td class="sm-mono">{{tc.index + 1}}</td>
+                    <td class="sm-mono">{{tc.tool_name}}</td>
+                    <td><span class="sm-badge" ng-class="toolCallStatusClass(tc.result_status)">{{tc.result_status}}</span></td>
+                    <td class="sm-mono">{{toolCallLatency(tc.latency_ms)}}</td>
+                    <td><pre class="sm-tool-params">{{toolCallParams(tc)}}</pre></td>
+                    <td class="sm-tool-result" title="{{tc.result_summary}}">{{tc.result_summary || '--'}}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>

@@ -1,0 +1,41 @@
+<!-- Copyright start
+   MIT License
+   Copyright (c) 2026 Fortinet Inc
+   Copyright end -->
+  <div class="sm-empty" ng-if="isPanelLoading('scheduled')" data-testid="sm-scheduled-loading">
+    <span class="sm-spinner"></span>
+    Loading scheduled tasks...
+  </div>
+  <div class="sm-empty" ng-if="panelFailed.scheduled && !isPanelLoading('scheduled')" data-testid="sm-scheduled-failed">
+    Could not load scheduled tasks. Refresh to try again.
+  </div>
+  <div class="sm-empty" ng-if="isPanelEmpty('scheduled', scheduledTasks)" data-testid="sm-scheduled-empty">
+    <i class="ic ic-calendar sm-empty-icon" aria-hidden="true"></i>
+    No scheduled tasks configured
+  </div>
+  <div class="sm-table-wrap" ng-if="scheduledTasks.length" data-testid="sm-scheduled-table">
+    <table>
+      <thead><tr><th>Task</th><th>Schedule</th><th>Intent</th><th>Last run</th><th>Runs</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        <tr ng-repeat="t in scheduledTasks track by t.name" data-testid="sm-scheduled-row">
+          <td>{{t.name}}</td>
+          <td class="sm-mono">{{t.cron}}</td>
+          <td><span class="sm-badge" ng-class="t.intent">{{t.intent}}</span></td>
+          <td class="sm-mono">{{t.last_run_at ? (t.last_run_at | date:'MMM d, HH:mm') : 'never'}}</td>
+          <td>{{t.total_run_count || 0 | number}}</td>
+          <td><span class="sm-badge" ng-class="{'on': t.schedule_enabled !== false, 'paused': t.schedule_enabled === false}">{{t.schedule_enabled === false ? 'paused' : 'enabled'}}</span></td>
+          <td>
+            <div class="sm-row-actions">
+              <button class="sm-btn" ng-click="runScheduledNow(t.name)"
+                      ng-disabled="runStateFor(t.name).state === 'running'"
+                      data-testid="sm-scheduled-run"><i class="ic ic-play" aria-hidden="true"></i>{{runStateFor(t.name).state === 'running' ? 'Running' : 'Run now'}}</button>
+              <span class="sm-run-result" ng-if="runStateFor(t.name)"
+                    ng-class="runStateFor(t.name).state"
+                    title="{{runStateFor(t.name).message}}"
+                    data-testid="sm-scheduled-run-result">{{runStateFor(t.name).state === 'ok' ? 'Triggered' : (runStateFor(t.name).state === 'error' ? 'Failed' : '')}}</span>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>

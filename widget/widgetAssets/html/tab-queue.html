@@ -1,0 +1,112 @@
+<!-- Copyright start
+   MIT License
+   Copyright (c) 2026 Fortinet Inc
+   Copyright end -->
+<div class="sm-queue" data-testid="sm-queue">
+  <div class="sm-q-bar">
+    <div class="sm-q-tabs" role="group" aria-label="Case filter">
+      <button type="button" class="sm-q-tab" ng-repeat="b in QUEUE_BUCKETS" ng-class="{active: queue.bucket === b.key}"
+              ng-click="setQueueBucket(b.key)" aria-pressed="{{queue.bucket === b.key}}"
+              data-testid="sm-queue-tab-{{b.key}}">{{b.label}} ({{queue.counts[b.key] | number}})</button>
+    </div>
+    <select class="sm-q-window" ng-model="queue.hours" ng-options="w.hours as w.label for w in QUEUE_WINDOWS"
+            ng-change="queueWindowChanged()" aria-label="Time window" data-testid="sm-queue-window"></select>
+  </div>
+
+  <div class="sm-help" data-testid="sm-help" ng-if="wouldHelp.state !== 'loading'">
+    <div class="sm-help-title">Would help most</div>
+    <div class="sm-help-sub" ng-if="wouldHelp.state === 'ready' && wouldHelp.uncertain" data-testid="sm-help-sub">
+      {{wouldHelp.uncertain | number}} uncertain {{wouldHelp.uncertain === 1 ? 'case' : 'cases'}} in the {{queueWindowLabel()}}; sources that would have helped, most first.
+    </div>
+    <div class="sm-help-empty" ng-if="wouldHelp.state === 'unavailable'" data-testid="sm-help-unavailable">
+      The sources that would help could not be loaded.
+    </div>
+    <div class="sm-help-empty" ng-if="wouldHelp.state === 'ready' && !wouldHelp.uncertain" data-testid="sm-help-empty">
+      No uncertain cases in the {{queueWindowLabel()}}, so nothing is missing.
+    </div>
+    <div class="sm-help-empty" ng-if="wouldHelp.state === 'ready' && wouldHelp.uncertain && !wouldHelp.items.length" data-testid="sm-help-none">
+      None of the uncertain cases traces back to a missing or failing source.
+    </div>
+    <ul class="sm-help-list" ng-if="wouldHelp.items.length" data-testid="sm-help-list">
+      <li class="sm-help-item" ng-repeat="it in wouldHelp.items track by (it.state + '/' + it.label)" data-testid="sm-help-item">
+        <div class="sm-help-what">
+          <span data-testid="sm-help-problem">{{it.problem}}</span>
+          <a class="sm-help-link" ng-if="helpNeedsSetup(it)" ng-href="{{connectorsHref()}}" target="_blank" rel="noopener" data-testid="sm-help-link">{{it.state === 'failed' ? 'Check its connection' : 'Set up a connector'}}</a>
+        </div>
+        <div class="sm-help-count" data-testid="sm-help-count">{{helpCasesText(it)}}</div>
+      </li>
+    </ul>
+  </div>
+
+  <div class="sm-empty" ng-if="isPanelLoading('queue')" data-testid="sm-queue-loading">
+    <span class="sm-spinner"></span>
+    Loading cases...
+  </div>
+  <div class="sm-empty" ng-if="panelFailed.queue && !isPanelLoading('queue')" data-testid="sm-queue-failed">
+    {{panelFailed.queue}} Refresh to try again.
+  </div>
+  <div class="sm-empty" ng-if="isPanelEmpty('queue', queue.rows)" data-testid="sm-queue-empty">
+    <i class="ic ic-check sm-empty-icon" aria-hidden="true"></i>
+    <span ng-if="queue.bucket === 'handled'">The assistant has not handled any cases in this window</span>
+    <span ng-if="queue.bucket === 'needs_you'">Nothing is waiting on you in this window</span>
+    <span ng-if="queue.bucket === 'reopened'">No handled case was reopened in this window</span>
+  </div>
+
+  <div class="sm-q-list" ng-if="queue.rows.length" data-testid="sm-queue-list">
+    <div class="sm-q-head" aria-hidden="true">
+      <div>Case</div><div>Verdict</div><div>Conf</div><div>Checked</div><div>Action</div>
+    </div>
+    <div class="sm-q-item" ng-repeat="r in queue.rows track by (r.session_id + '/' + r.record_iri)" data-testid="sm-queue-row">
+      <div class="sm-q-row">
+        <div class="sm-q-case">
+          <a ng-if="recordHref(r)" ng-href="{{recordHref(r)}}" target="_blank" rel="noopener" data-testid="sm-queue-case">{{r.record_name}}</a>
+          <span ng-if="!recordHref(r)" data-testid="sm-queue-case">{{r.record_name}}</span>
+          <div class="sm-q-sub">
+            <span data-testid="sm-queue-when">{{queueAgo(r)}}</span>
+            <span ng-if="r.group_size > 1" data-testid="sm-queue-group">, +{{r.group_size - 1}} related</span>
+          </div>
+        </div>
+        <div class="sm-q-cell"><span class="sm-q-k">Verdict</span><span data-testid="sm-queue-verdict">{{r.verdict || '-'}}</span></div>
+        <div class="sm-q-cell"><span class="sm-q-k">Conf</span><span data-testid="sm-queue-conf">{{confText(r)}}</span></div>
+        <div class="sm-q-cell"><span class="sm-q-k">Checked</span><span data-testid="sm-queue-sources">{{sourcesText(r)}}</span></div>
+        <div class="sm-q-cell">
+          <span class="sm-q-k">Action</span><span data-testid="sm-queue-action">{{r.action}}</span>
+          <div class="sm-q-sub" data-testid="sm-queue-kind">{{actionKindLabel(r)}}</div>
+          <div class="sm-q-sub" ng-if="queueUndoState(r).state === 'done'" data-testid="sm-queue-undone">Undone</div>
+          <div class="sm-q-err" ng-if="queueUndoState(r).state === 'failed'" data-testid="sm-queue-undo-error">{{queueUndoState(r).message}}</div>
+          <div class="sm-q-actions">
+            <span class="sm-q-fb" role="group" aria-label="Was this decision right?">
+              <button type="button" class="sm-btn right" ng-click="rate(r, 'right')" ng-disabled="r.feedbackSaving"
+                      aria-pressed="{{r.feedback.mine === 'right'}}" data-testid="sm-queue-right"><i class="ic ic-check" aria-hidden="true"></i>Right<span ng-if="r.feedback.right" data-testid="sm-queue-right-count">&nbsp;{{r.feedback.right}}</span></button>
+              <button type="button" class="sm-btn wrong" ng-click="rate(r, 'wrong')" ng-disabled="r.feedbackSaving"
+                      aria-pressed="{{r.feedback.mine === 'wrong'}}" data-testid="sm-queue-wrong"><i class="ic ic-x" aria-hidden="true"></i>Wrong<span ng-if="r.feedback.wrong" data-testid="sm-queue-wrong-count">&nbsp;{{r.feedback.wrong}}</span></button>
+            </span>
+            <button type="button" class="sm-btn" ng-if="canQueueUndo(r)" ng-click="queueUndo(r)" data-testid="sm-queue-undo">Undo</button>
+            <button type="button" class="sm-btn" ng-click="toggleQueueDetail(r)" aria-expanded="{{!!r.open}}" data-testid="sm-queue-more">{{r.open ? 'Hide details' : 'Details'}}</button>
+          </div>
+          <div class="sm-q-err" ng-if="r.feedbackError" role="alert" data-testid="sm-queue-feedback-error">{{r.feedbackError}}</div>
+        </div>
+      </div>
+      <div class="sm-q-detail" ng-if="r.open" data-testid="sm-queue-detail">
+        <div class="sm-section-title">Why</div>
+        <ul ng-if="r.reasons.length"><li ng-repeat="why in r.reasons track by $index" data-testid="sm-queue-reason">{{why}}</li></ul>
+        <div class="sm-q-sub" ng-if="!r.reasons.length">No reasons were recorded.</div>
+        <div class="sm-section-title">Your note</div>
+        <div class="sm-q-note">
+          <textarea ng-model="r.noteDraft" maxlength="500" ng-disabled="!r.feedback.mine || r.feedbackSaving"
+                    placeholder="{{r.feedback.mine ? 'Add a note about this decision' : 'Rate the decision first to add a note'}}"
+                    aria-label="Note about this decision" data-testid="sm-queue-note"></textarea>
+          <button type="button" class="sm-btn" ng-disabled="!r.feedback.mine || r.feedbackSaving" ng-click="saveFeedbackNote(r)" data-testid="sm-queue-note-save">Save note</button>
+          <span class="sm-q-sub" ng-if="r.noteSaved" data-testid="sm-queue-note-saved">Saved</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="sm-q-sub" ng-if="queue.total > queue.rows.length" data-testid="sm-queue-more-rows">Showing the newest {{queue.rows.length}} of {{queue.total}} cases.</div>
+
+  <div class="sm-q-foot" data-testid="sm-queue-footer">
+    <span>Agreement <b data-testid="sm-footer-agreement">{{agreementText()}}</b></span>
+    <span>Reopened <b data-testid="sm-footer-reopened">{{kpiValue('reopened')}}</b></span>
+    <span>Cost today <b data-testid="sm-footer-cost">{{costTodayText()}}</b></span>
+  </div>
+</div>

@@ -1,0 +1,29 @@
+<!-- Copyright start
+   MIT License
+   Copyright (c) 2026 Fortinet Inc
+   Copyright end -->
+  <div class="sm-empty" ng-if="!users().length" data-testid="sm-users-empty">
+    <i class="ic ic-users sm-empty-icon" aria-hidden="true"></i>
+    No user activity in this range
+  </div>
+  <div class="sm-table-wrap" ng-if="users().length" data-testid="sm-users-table">
+    <table>
+      <thead><tr><th>User</th><th class="sm-num">Turns</th><th class="sm-num">Tokens</th><th class="sm-num">Cost (USD)</th><th class="sm-num">Share</th></tr></thead>
+      <tbody>
+        <tr ng-repeat="u in users() track by u.key" data-testid="sm-users-row">
+          <td ng-class="{'sm-cell-clickable': canFilterUser(u)}" ng-click="filterByUser(u)" data-testid="sm-users-name">{{u.name}}</td>
+          <td class="sm-num">{{u.turns | number}}</td>
+          <td class="sm-num">{{u.tokens | number}}</td>
+          <td class="sm-num">${{u.cost | number:4}}</td>
+          <td class="sm-num">
+            <div style="display:inline-flex;align-items:center;gap:6px;">
+              <div style="width:60px;height:5px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+                <div style="height:100%;width:{{userSharePct(u)}}%;background:var(--teal);border-radius:3px;"></div>
+              </div>
+              <span class="sm-mono">{{userSharePct(u) | number:0}}%</span>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>

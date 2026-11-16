@@ -1,0 +1,203 @@
+<!-- Copyright start
+   MIT License
+   Copyright (c) 2026 Fortinet Inc
+   Copyright end -->
+  <div class="sm-empty" ng-if="isPanelLoading('autonomy')" data-testid="sm-autonomy-loading">
+    <span class="sm-spinner"></span>
+    Loading autonomy decisions...
+  </div>
+  <div class="sm-empty" ng-if="panelFailed.autonomy && !isPanelLoading('autonomy')" data-testid="sm-autonomy-failed">
+    Could not load autonomy decisions. Refresh to try again.
+  </div>
+  <div ng-if="panelLoaded.autonomy && !isPanelLoading('autonomy') && !panelFailed.autonomy">
+    <div class="sm-policy-line" data-testid="sm-autonomy-policy">{{policyLine()}}</div>
+
+    <!-- The policy itself: kill switch, mode, each rule's conditions, and the editor -->
+    <div class="sm-policy-doc" data-testid="sm-autonomy-doc">
+      <div class="sm-policy-doc-head">
+        <span data-testid="sm-autonomy-doc-state">
+          <span ng-if="policyDoc">Kill switch: <b>{{policyDoc.enabled === false ? 'OFF - nothing acts' : 'armed'}}</b> &nbsp;-&nbsp; Mode: <b>{{policyDoc.mode || 'shadow'}}</b></span>
+          <span ng-if="!policyDoc">No policy document is stored.</span>
+        </span>
+        <span>
+          <span class="sm-policy-saved" ng-if="policyBuilder.savedAt && !policyBuilder.open" data-testid="sm-autonomy-saved">Policy saved.</span>
+          <span class="sm-policy-error" ng-if="policyBuilder.error && !policyBuilder.open" data-testid="sm-autonomy-open-error">{{policyBuilder.error}}</span>
+          <button class="sm-btn" ng-click="openPolicyBuilder()" ng-if="!policyBuilder.open" data-testid="sm-autonomy-edit">Edit policy</button>
+        </span>
+      </div>
+      <div class="sm-table-wrap" ng-if="policyRules().length && !policyBuilder.open" data-testid="sm-autonomy-rule-defs">
+        <table>
+          <thead><tr><th>Rule</th><th>Action</th><th>When</th><th>Limits</th></tr></thead>
+          <tbody>
+            <tr ng-repeat="r in policyRules() track by r.id" data-testid="sm-autonomy-rule-def">
+              <td class="sm-mono">{{r.id}}</td>
+              <td>{{ruleAction(r)}}</td>
+              <td>{{ruleWhen(r)}}</td>
+              <td>{{ruleLimits(r)}}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="sm-policy-builder" ng-if="policyBuilder.open" data-testid="sm-autonomy-editor">
+        <div class="sm-pending-meta">Build the policy below. It decides what the assistant may do on its own after it reaches a verdict; the assistant never acts on its own otherwise. Saving needs a reviewer role, and the policy is checked on save, so an invalid policy is refused and nothing changes.</div>
+
+        <!-- Kill switch + mode: the two policy-wide controls -->
+        <div class="sm-pb-top">
+          <label class="sm-pb-field">
+            <span class="sm-pb-label">Autonomy</span>
+            <select ng-model="policyBuilder.enabled" ng-options="o.v as o.t for o in [{v:true,t:'Armed'},{v:false,t:'Off (nothing acts)'}]" data-testid="sm-autonomy-killswitch"></select>
+          </label>
+          <label class="sm-pb-field">
+            <span class="sm-pb-label">Mode</span>
+            <select ng-model="policyBuilder.mode" ng-options="o.v as o.t for o in [{v:'shadow',t:'Shadow (record what it would do, nothing acts)'},{v:'enforce',t:'Enforce (act on its own)'}]" data-testid="sm-autonomy-mode"></select>
+          </label>
+        </div>
+
+        <div class="sm-pb-empty" ng-if="!policyBuilder.rules.length" data-testid="sm-autonomy-norules">No rules yet. Add one to let the assistant act on a verdict.</div>
+
+        <!-- One card per rule -->
+        <div class="sm-pb-rule" ng-repeat="row in policyBuilder.rules" data-testid="sm-autonomy-rule-edit">
+          <div class="sm-pb-rule-head">
+            <label class="sm-pb-field sm-pb-grow">
+              <span class="sm-pb-label">Rule name</span>
+              <input type="text" ng-model="row.id" ng-readonly="!row.supported" placeholder="close-false-positive" data-testid="sm-autonomy-rule-id">
+            </label>
+            <button class="sm-btn" ng-click="removeRule($index)" data-testid="sm-autonomy-rule-remove">Remove</button>
+          </div>
+
+          <!-- A rule the form cannot represent is shown read-only and saved
+               unchanged, so editing other rules never recasts it. -->
+          <div ng-if="!row.supported" class="sm-pb-sub" data-testid="sm-autonomy-rule-readonly">
+            <div class="sm-pb-hint">This rule uses options this form does not show. It is kept exactly as saved. To change it, remove it here and add it again, or edit the policy through the connector.</div>
+            <div class="sm-pb-label">Action</div>
+            <div>{{ruleAction(row._orig)}}</div>
+            <div class="sm-pb-label">When</div>
+            <div>{{ruleWhen(row._orig)}}</div>
+          </div>
+
+          <div ng-if="row.supported">
+          <label class="sm-pb-field">
+            <span class="sm-pb-label">Action</span>
+            <select ng-model="row.actionKey" ng-options="a.key as a.label for a in autonomyActions" data-testid="sm-autonomy-rule-action"></select>
+          </label>
+
+          <!-- Close-only fields -->
+          <div ng-if="ruleActionKind(row) === 'close'" class="sm-pb-sub">
+            <label class="sm-pb-field">
+              <span class="sm-pb-label">On which records</span>
+              <input type="text" ng-model="row.module" placeholder="alerts" data-testid="sm-autonomy-rule-module">
+            </label>
+            <div class="sm-pb-label">The close may also set</div>
+            <label class="sm-pb-check"><input type="checkbox" ng-model="row.setResolution" data-testid="sm-autonomy-rule-resolution"> a resolution</label>
+            <label class="sm-pb-check"><input type="checkbox" ng-model="row.setClosureNotes" data-testid="sm-autonomy-rule-note"> a closure note</label>
+            <div class="sm-pb-hint">The close always sets status to Closed and nothing else; owner, severity and the like are never changed on their own.</div>
+          </div>
+
+          <!-- Block-only fields -->
+          <div ng-if="ruleActionKind(row) === 'block'" class="sm-pb-sub">
+            <label class="sm-pb-check"><input type="checkbox" ng-model="row.externalOnly" data-testid="sm-autonomy-rule-external"> external addresses only</label>
+            <label class="sm-pb-field">
+              <span class="sm-pb-label">Never block addresses on this protected list (optional)</span>
+              <input type="text" ng-model="row.notIn" placeholder="protected_ips" data-testid="sm-autonomy-rule-notin">
+            </label>
+          </div>
+
+          <div class="sm-pb-label">When the verdict is</div>
+          <div class="sm-pb-dispositions">
+            <label class="sm-pb-check" ng-repeat="d in autonomyDispositions"><input type="checkbox" ng-model="row.disp[d.key]" data-testid="sm-autonomy-rule-disp"> {{d.label}}</label>
+          </div>
+
+          <label class="sm-pb-field">
+            <span class="sm-pb-label">Confidence at least</span>
+            <span class="sm-pb-inline"><input type="number" min="0" max="100" ng-model="row.minConfidence" class="sm-pb-num" data-testid="sm-autonomy-rule-confidence"> %</span>
+          </label>
+
+          <label class="sm-pb-check"><input type="checkbox" ng-model="row.requireLookup" data-testid="sm-autonomy-rule-evidence"> only if the verdict cites a successful lookup<span ng-if="ruleActionKind(row) === 'block'"> that rated the address {{row.rated}}</span></label>
+          <label class="sm-pb-field" ng-if="ruleActionKind(row) === 'block' && row.requireLookup">
+            <span class="sm-pb-label">Lookup must rate it at least</span>
+            <select ng-model="row.rated" ng-options="o.v as o.t for o in [{v:'malicious',t:'malicious'},{v:'suspicious',t:'suspicious'}]" data-testid="sm-autonomy-rule-rated"></select>
+          </label>
+
+          <div class="sm-pb-label">Limits (optional)</div>
+          <div class="sm-pb-limits">
+            <span class="sm-pb-inline"><input type="number" min="0" ng-model="row.perHour" class="sm-pb-num" data-testid="sm-autonomy-rule-perhour"> per hour</span>
+            <span class="sm-pb-inline"><input type="number" min="0" ng-model="row.perTargetPerDay" class="sm-pb-num" data-testid="sm-autonomy-rule-perday"> per target per day</span>
+          </div>
+          </div>
+        </div>
+
+        <button class="sm-btn" ng-click="addRule()" data-testid="sm-autonomy-addrule">Add a rule</button>
+
+        <div class="sm-policy-error" ng-if="policyBuilder.error" data-testid="sm-autonomy-editor-error">{{policyBuilder.error}}</div>
+        <div class="sm-policy-actions">
+          <button class="sm-btn primary" ng-click="savePolicyBuilder()" ng-disabled="policyBuilder.saving" data-testid="sm-autonomy-save">{{policyBuilder.saving ? 'Saving...' : 'Save policy'}}</button>
+          <button class="sm-btn" ng-click="cancelPolicyBuilder()" ng-disabled="policyBuilder.saving" data-testid="sm-autonomy-cancel">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <div ng-include="tpl('autonomy-rules')"></div>
+    <div ng-include="tpl('autonomy-tuning')"></div>
+
+    <div class="sm-empty" ng-if="policyView.state === 'unavailable' && !shadow.rules.length" data-testid="sm-autonomy-empty">
+      No action has been checked against the policy yet.
+    </div>
+    <div class="sm-table-wrap" ng-if="policyView.state === 'unavailable' && shadow.rules.length" data-testid="sm-autonomy-rules">
+      <table>
+        <thead><tr><th>Rule</th><th>Would run it, approved</th><th>Would run it, rejected</th><th>Would ask, approved</th><th>Would ask, rejected</th><th>Not decided</th></tr></thead>
+        <tbody>
+          <tr ng-repeat="r in shadow.rules track by r.rule" data-testid="sm-autonomy-rule">
+            <td class="sm-mono" data-testid="sm-autonomy-rule-name">{{r.rule}}</td>
+            <td data-testid="sm-autonomy-agree">{{r.would_act_approved}}</td>
+            <td ng-class="{'sm-badge-warn': r.would_act_rejected > 0}" data-testid="sm-autonomy-miss">{{r.would_act_rejected}}</td>
+            <td data-testid="sm-autonomy-missed-automation">{{r.would_not_act_approved}}</td>
+            <td>{{r.would_not_act_rejected}}</td>
+            <td>{{r.undecided}}</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="sm-pending-meta sm-autonomy-note" data-testid="sm-autonomy-note">A rule should not be enforced while it has a "would run it, rejected".</div>
+    </div>
+    <div class="sm-table-wrap" ng-if="tuningView.state === 'unavailable' && shadow.tuning.length" data-testid="sm-autonomy-tuning">
+      <table>
+        <thead><tr><th>Detection rule</th><th>Source</th><th>Closed as false positive</th><th>Reopened</th><th>Last closed</th></tr></thead>
+        <tbody>
+          <tr ng-repeat="t in shadow.tuning track by (t.source + '/' + t.rule)" data-testid="sm-autonomy-tuning-row">
+            <td data-testid="sm-autonomy-tuning-rule">{{t.rule || 'Unnamed rule'}}</td>
+            <td data-testid="sm-autonomy-tuning-source">{{t.source || 'Unknown source'}}</td>
+            <td data-testid="sm-autonomy-tuning-closed">{{t.closed}}</td>
+            <td ng-class="{'sm-badge-warn': t.reopened > 0}" data-testid="sm-autonomy-tuning-reopened">{{t.reopened}}</td>
+            <td class="sm-mono">{{(t.last_at * 1000) | date:'MMM d, HH:mm'}}</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="sm-pending-meta sm-autonomy-note" data-testid="sm-autonomy-tuning-note">Detection rules whose alerts the policy closed as false positives. Tuning a noisy rule at its source stops the alerts; a reopened close means the policy got one wrong.</div>
+    </div>
+    <div class="sm-table-wrap" ng-if="shadow.decisions.length" data-testid="sm-autonomy-decisions">
+      <table>
+        <thead><tr><th>Action</th><th>Policy</th><th>Reviewer</th><th>When</th><th></th></tr></thead>
+        <tbody>
+          <tr ng-repeat="d in shadow.decisions track by (d.session_id + '/' + d.card_id)" ng-class="{'sm-row-warn': shadowIsMiss(d)}" data-testid="sm-autonomy-decision">
+            <td>
+              <div class="sm-pending-title">{{shadowTitle(d)}}</div>
+              <div class="sm-pending-meta sm-mono">{{d.policy.rule}}</div>
+            </td>
+            <td>
+              <div data-testid="sm-autonomy-outcome">{{shadowOutcome(d)}}</div>
+              <ul class="sm-esc-reasons" ng-if="d.policy.failed.length" data-testid="sm-autonomy-reasons">
+                <li ng-repeat="f in d.policy.failed track by $index">{{f}}</li>
+              </ul>
+            </td>
+            <td data-testid="sm-autonomy-human">{{shadowHuman(d)}}
+              <div class="sm-pending-meta" ng-if="d.undone_at" data-testid="sm-autonomy-undone">{{undoneLine(d)}}</div>
+            </td>
+            <td class="sm-mono">{{(d.at * 1000) | date:'MMM d, HH:mm'}}</td>
+            <td><div class="sm-row-actions">
+              <button class="sm-btn" ng-if="canUndo(d) || undoStateFor(d).state === 'sending'" ng-disabled="undoStateFor(d).state === 'sending'" ng-click="undoAction(d)" data-testid="sm-autonomy-undo">Undo</button>
+              <span class="sm-pending-note" ng-if="undoStateFor(d).state === 'taken' || undoStateFor(d).state === 'failed'" data-testid="sm-autonomy-undo-note">{{undoStateFor(d).message}}</span>
+            </div></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>

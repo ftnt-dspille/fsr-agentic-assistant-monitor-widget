@@ -1,0 +1,75 @@
+<!-- Copyright start
+   MIT License
+   Copyright (c) 2026 Fortinet Inc
+   Copyright end -->
+  <div class="sm-empty" ng-if="!pending.length && !escalations.length" data-testid="sm-pending-empty">
+    <i class="ic ic-check sm-empty-icon" aria-hidden="true"></i>
+    Nothing is waiting for approval
+  </div>
+  <!-- Records auto-triage could not finish alone, most urgent first -->
+  <div class="sm-pending-section" ng-if="escalations.length" data-testid="sm-esc-section">
+    <div class="sm-section-title">Needs review</div>
+    <div class="sm-table-wrap">
+      <table>
+        <thead><tr><th></th><th>Record</th><th>Age</th><th></th></tr></thead>
+        <tbody>
+          <tr ng-repeat="e in escalations track by (e.session_id + '/' + e.card_id)" data-testid="sm-esc-row">
+            <td><span class="sm-prio" ng-class="'sm-prio-' + (e.priority || 'P4').toLowerCase()" data-testid="sm-esc-priority">{{e.priority || 'P4'}}</span></td>
+            <td>
+              <div class="sm-pending-title" data-testid="sm-esc-title">{{(e.record && e.record.name) || 'Untitled record'}}</div>
+              <div class="sm-pending-meta" data-testid="sm-esc-verdict">{{verdictLine(e)}}<span ng-if="e.record && e.record.severity"> · {{e.record.severity}} severity</span></div>
+              <div class="sm-pending-meta" ng-if="e.verdict && e.verdict.summary" data-testid="sm-esc-summary">{{e.verdict.summary}}</div>
+              <ul class="sm-esc-reasons" ng-if="e.reasons.length" data-testid="sm-esc-reasons">
+                <li ng-repeat="r in e.reasons track by $index">{{r}}</li>
+              </ul>
+              <div class="sm-esc-approvals" ng-if="escApprovals[e.session_id].length" data-testid="sm-esc-approvals">
+                <div class="sm-esc-approval" ng-repeat="p in escApprovals[e.session_id] track by (p.card_id || p.approval_id)" data-testid="sm-esc-approval">
+                  <span data-testid="sm-esc-approval-title">{{pendingTitle(p)}}<span ng-if="pendingTarget(p)"> on {{pendingTarget(p)}}</span></span>
+                  <button class="sm-btn sm-btn-approve" ng-if="p.card" ng-disabled="decisionFor(p).state === 'sending' || decisionFor(p).state === 'taken'" ng-click="decidePending(p, 'approve')" data-testid="sm-esc-approve">Approve</button>
+                  <button class="sm-btn" ng-if="p.card" ng-disabled="decisionFor(p).state === 'sending' || decisionFor(p).state === 'taken'" ng-click="decidePending(p, 'reject')" data-testid="sm-esc-reject">Reject</button>
+                  <span class="sm-pending-note" ng-if="decisionFor(p).state === 'taken' || decisionFor(p).state === 'failed'">{{decisionFor(p).message}}</span>
+                </div>
+              </div>
+              <div class="sm-pending-note" ng-if="escDecisionFor(e).state === 'taken' || escDecisionFor(e).state === 'failed'" data-testid="sm-esc-note">{{escDecisionFor(e).message}}</div>
+            </td>
+            <td ng-class="{'sm-badge-warn': e.age_seconds > 3600}" data-testid="sm-esc-age">{{ageText(e.age_seconds)}}</td>
+            <td><div class="sm-row-actions">
+              <button class="sm-btn sm-btn-approve" ng-disabled="escDecisionFor(e).state === 'sending' || escDecisionFor(e).state === 'taken'" ng-click="resolveEscalation(e, 'handled')" data-testid="sm-esc-handled">Mark handled</button>
+              <button class="sm-btn" ng-disabled="escDecisionFor(e).state === 'sending' || escDecisionFor(e).state === 'taken'" ng-click="resolveEscalation(e, 'dismissed')" data-testid="sm-esc-dismiss">Dismiss</button>
+              <button class="sm-btn" ng-click="openEscalationInChat(e)" data-testid="sm-esc-open">Open in chat</button>
+            </div></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="sm-pending-section sm-table-wrap" ng-if="otherPending.length" data-testid="sm-pending-table">
+    <table>
+      <thead><tr><th>Waiting for approval</th><th>Asked by</th><th>Age</th><th></th></tr></thead>
+      <tbody>
+        <tr ng-repeat="p in otherPending track by (p.session_id + '/' + (p.card_id || p.approval_id))" data-testid="sm-pending-row">
+          <td>
+            <div class="sm-pending-title" data-testid="sm-pending-title">{{pendingTitle(p)}}</div>
+            <div class="sm-pending-meta" ng-if="pendingTarget(p)" data-testid="sm-pending-target">On {{pendingTarget(p)}}</div>
+            <div class="sm-pending-meta" ng-if="p.card.batch_count" data-testid="sm-pending-batch">and {{p.card.batch_count}} more change{{p.card.batch_count === 1 ? '' : 's'}} in the same approval</div>
+            <table class="sm-pending-changes" ng-if="p.card.changes.length" data-testid="sm-pending-changes">
+              <tr ng-repeat="c in p.card.changes">
+                <td class="sm-mono">{{c.field}}</td>
+                <td class="sm-pending-before" ng-if="c.before !== undefined && c.before !== null">{{c.before}}</td>
+                <td class="sm-pending-before" ng-if="c.before === undefined || c.before === null">(empty)</td>
+                <td class="sm-pending-after">{{c.after}}</td>
+              </tr>
+            </table>
+            <div class="sm-pending-note" ng-if="decisionFor(p).state === 'taken' || decisionFor(p).state === 'failed'" data-testid="sm-pending-note">{{decisionFor(p).message}}</div>
+          </td>
+          <td>{{(p.user && (p.user.name || p.user.iri)) || '--'}}</td>
+          <td ng-class="{'sm-badge-warn': p.age_seconds > 3600}">{{ageText(p.age_seconds)}}</td>
+          <td><div class="sm-row-actions">
+            <button class="sm-btn sm-btn-approve" ng-if="p.card" ng-disabled="decisionFor(p).state === 'sending' || decisionFor(p).state === 'taken'" ng-click="decidePending(p, 'approve')" data-testid="sm-pending-approve">Approve</button>
+            <button class="sm-btn" ng-if="p.card" ng-disabled="decisionFor(p).state === 'sending' || decisionFor(p).state === 'taken'" ng-click="decidePending(p, 'reject')" data-testid="sm-pending-reject">Reject</button>
+            <button class="sm-btn" ng-click="openInChat(p)" data-testid="sm-pending-open">Open in chat</button>
+          </div></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>

@@ -1,0 +1,75 @@
+<!-- Copyright start
+   MIT License
+   Copyright (c) 2026 Fortinet Inc
+   Copyright end -->
+  <!-- Usage tiles with sparkline accents -->
+    <div class="sm-cards">
+      <div class="sm-card" data-testid="sm-card-turns">
+        <div class="sm-card-icon turns"><i class="ic ic-sparkle" aria-hidden="true"></i></div>
+        <div class="sm-card-label">Agent Turns</div>
+        <div class="sm-card-value">{{totals.turns | number}}</div>
+        <div class="sm-card-sub">{{config.range === '24h' ? 'last 24 hours' : 'last ' + config.range}}</div>
+        <div class="sm-card-spark" ng-if="sparkTurns">
+          <svg viewBox="0 0 100 28" preserveAspectRatio="none"><path ng-attr-d="{{sparkTurns}}" fill="none" stroke="var(--violet)" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" opacity="0.8"/><path ng-attr-d="{{sparkTurnsFill}}" fill="var(--violet)" opacity="0.08"/></svg>
+        </div>
+      </div>
+      <div class="sm-card" data-testid="sm-card-tokens">
+        <div class="sm-card-icon tokens"><i class="ic ic-layers" aria-hidden="true"></i></div>
+        <div class="sm-card-label">Total Tokens</div>
+        <div class="sm-card-value">{{totals.tokens | number}}</div>
+        <div class="sm-card-sub">input + output</div>
+        <div class="sm-card-spark" ng-if="sparkTokens">
+          <svg viewBox="0 0 100 28" preserveAspectRatio="none"><path ng-attr-d="{{sparkTokens}}" fill="none" stroke="var(--teal)" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" opacity="0.8"/><path ng-attr-d="{{sparkTokensFill}}" fill="var(--teal)" opacity="0.08"/></svg>
+        </div>
+      </div>
+      <div class="sm-card" data-testid="sm-card-cost">
+        <div class="sm-card-icon cost"><i class="ic ic-dollar" aria-hidden="true"></i></div>
+        <div class="sm-card-label">Cost (USD)</div>
+        <div class="sm-card-value cost">${{fmtCost(totals.cost)}}</div>
+        <div class="sm-card-sub">{{config.range}}</div>
+        <div class="sm-card-spark" ng-if="sparkCost">
+          <svg viewBox="0 0 100 28" preserveAspectRatio="none"><path ng-attr-d="{{sparkCost}}" fill="none" stroke="var(--amber)" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" opacity="0.8"/><path ng-attr-d="{{sparkCostFill}}" fill="var(--amber)" opacity="0.08"/></svg>
+        </div>
+      </div>
+      <div class="sm-card sm-card-clickable" data-testid="sm-card-pending" ng-click="toggleFilter('session_status', 'waiting_approval'); setTab('sessions')">
+        <div class="sm-card-icon pending"><i class="ic ic-pause" aria-hidden="true"></i></div>
+        <div class="sm-card-label">Pending approvals</div>
+        <div class="sm-card-value pending">{{totals.pending | number}}</div>
+        <div class="sm-card-sub">awaiting analyst</div>
+      </div>
+    </div>
+  <div class="sm-chart-wrap" data-testid="sm-overview-chart" ng-if="summary.length">
+    <div class="sm-chart-header">
+      <div class="sm-chart-title">Cost over time</div>
+      <div class="sm-chart-range">{{config.range === '24h' ? '24h' : config.range}}</div>
+    </div>
+    <!-- The plot is SVG (stretched to fit, which is fine for a pure area
+         path); the axis labels are HTML, because preserveAspectRatio="none"
+         distorts <text> horizontally. -->
+    <div class="sm-chart-plot">
+      <div class="sm-chart-ymax" data-testid="sm-chart-ymax">${{costAreaMax | number:4}}</div>
+      <svg class="sm-chart-svg" viewBox="0 0 1000 140" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="sm-grad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.35"/>
+            <stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <g class="sm-chart-grid">
+          <line x1="0" y1="10" x2="1000" y2="10" class="sm-chart-gridline"/>
+          <line x1="0" y1="72" x2="1000" y2="72" class="sm-chart-gridline"/>
+          <line x1="0" y1="134" x2="1000" y2="134" class="sm-chart-gridline"/>
+        </g>
+        <path ng-attr-d="{{costAreaFill}}" fill="url(#sm-grad)"/>
+        <path class="sm-chart-line" ng-attr-d="{{costAreaPath}}" vector-effect="non-scaling-stroke"/>
+      </svg>
+    </div>
+    <div class="sm-chart-axis-row">
+      <span class="sm-chart-axis-label" ng-repeat="label in costAreaLabels track by $index"
+            ng-style="{left: label.leftPct + '%'}" data-testid="sm-chart-axis-label">{{label.text}}</span>
+    </div>
+  </div>
+  <div class="sm-empty" ng-if="!summary.length" data-testid="sm-overview-empty">
+    <i class="ic ic-trend sm-empty-icon" aria-hidden="true"></i>
+    No usage data in this range yet
+  </div>

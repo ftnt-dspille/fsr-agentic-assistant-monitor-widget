@@ -1,0 +1,26 @@
+<!-- Copyright start
+   MIT License
+   Copyright (c) 2026 Fortinet Inc
+   Copyright end -->
+<div class="sm-table-wrap" ng-if="tuningView.state === 'ready' && tuningView.rules.length" data-testid="sm-tuning">
+  <table>
+    <thead><tr><th>Detection rule</th><th>Closed by the assistant</th><th>Reopened</th><th>Reopen rate</th><th>Can you tune it?</th></tr></thead>
+    <tbody>
+      <tr ng-repeat="t in tuningView.rules track by (t.source + '/' + t.rule)" data-testid="sm-tuning-row">
+        <td>
+          <div data-testid="sm-tuning-rule">{{t.rule || 'Unnamed rule'}}</div>
+          <div class="sm-pending-meta" data-testid="sm-tuning-source">{{t.source || 'Unknown source'}}</div>
+        </td>
+        <td data-testid="sm-tuning-closes">{{t.count}}</td>
+        <td ng-class="{'sm-badge-warn': t.reopened > 0}" data-testid="sm-tuning-reopened">{{t.reopened}}</td>
+        <td data-testid="sm-tuning-rate">{{tuningRate(t)}}</td>
+        <td>
+          <span class="sm-badge" ng-class="t.safe_to_tune ? 'on' : 'waiting'" data-testid="sm-tuning-flag"><i class="ic" ng-class="t.safe_to_tune ? 'ic-check' : 'ic-clock'" aria-hidden="true"></i>{{t.safe_to_tune ? 'Safe to tune' : 'Keep watching'}}</span>
+          <div class="sm-pending-meta" ng-if="t.note" data-testid="sm-tuning-note-row">{{t.note}}</div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="sm-pending-meta sm-autonomy-note" data-testid="sm-tuning-bar">{{tuneBar()}}</div>
+</div>
+<div class="sm-empty" ng-if="tuningView.state === 'ready' && !tuningView.rules.length" data-testid="sm-tuning-empty">The assistant has not closed any alerts as false positives in this window.</div>

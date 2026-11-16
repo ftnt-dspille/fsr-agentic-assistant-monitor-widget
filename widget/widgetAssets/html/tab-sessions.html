@@ -1,0 +1,32 @@
+<!-- Copyright start
+   MIT License
+   Copyright (c) 2026 Fortinet Inc
+   Copyright end -->
+  <div class="sm-empty" ng-if="isPanelLoading('sessions')" data-testid="sm-sessions-loading">
+    <span class="sm-spinner"></span>
+    Loading chat sessions...
+  </div>
+  <div class="sm-empty" ng-if="panelFailed.sessions && !isPanelLoading('sessions')" data-testid="sm-sessions-failed">
+    Could not load sessions. Refresh to try again.
+  </div>
+  <div class="sm-empty" ng-if="isPanelEmpty('sessions', liveSessions)" data-testid="sm-sessions-empty">
+    <i class="ic ic-chat sm-empty-icon" aria-hidden="true"></i>
+    No active chat sessions
+  </div>
+  <div class="sm-table-wrap" ng-if="liveSessions.length" data-testid="sm-sessions-table">
+    <table>
+      <thead><tr><th>Status</th><th>Session</th><th>User</th><th>Record</th><th>Prompt</th><th class="sm-num">Turns</th><th>Last activity</th><th></th></tr></thead>
+      <tbody>
+        <tr ng-repeat="s in liveSessions track by s.session_id" data-testid="sm-sessions-row">
+          <td><span class="sm-badge" ng-class="sessionStatusClass(s.status)" data-testid="sm-sessions-status">{{s.status === 'waiting_approval' ? 'waiting' : (s.status === 'active' ? 'streaming' : 'idle')}}</span></td>
+          <td class="sm-mono sm-truncate" title="{{s.session_id}}">{{s.session_id}}</td>
+          <td>{{(s.user && (s.user.name || s.user.iri)) || '--'}}</td>
+          <td><span ng-if="s.record_module" class="sm-badge">{{s.record_module}}</span><span ng-if="!s.record_module">--</span></td>
+          <td class="sm-sess-prompt" ng-class="{empty: !s.current_prompt}" title="{{s.current_prompt}}">{{s.current_prompt || 'no prompt'}}</td>
+          <td class="sm-num">{{s.turn_count | number}}</td>
+          <td class="sm-mono">{{sessionAgo(s)}}</td>
+          <td><div class="sm-row-actions"><button class="sm-btn" ng-click="openInChat(s)" data-testid="sm-sessions-open">Open in chat</button></div></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>

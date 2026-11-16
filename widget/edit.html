@@ -1,0 +1,50 @@
+<!-- Copyright start
+   MIT License
+   Copyright (c) 2026 Fortinet Inc
+   Copyright end -->
+<form data-ng-submit="save()" name="editAgenticAssistantMonitorForm"
+      data-testid="sm-cfg-form" class="noMargin" novalidate>
+  <div class="modal-header">
+    <h3 class="modal-title col-md-9">Agentic Assistant Monitor - Settings</h3>
+    <button type="button" class="close" data-ng-click="cancel()" data-dismiss="modal"
+            data-testid="sm-cfg-close" aria-label="Close"
+            id="close-edit-widget-form-btn">
+      <div aria-hidden="true" class="version-button">+</div>
+    </button>
+  </div>
+
+  <div class="modal-body">
+    <div class="form-group">
+      <label for="sm-cfg-title" class="control-label">Title</label>
+      <input id="sm-cfg-title" type="text" class="form-control"
+             data-testid="sm-cfg-title" ng-model="config.title"
+             placeholder="Agentic Assistant Monitor">
+    </div>
+    <div class="form-group">
+      <label for="sm-cfg-range" class="control-label">Default time range</label>
+      <select id="sm-cfg-range" class="form-control"
+              data-testid="sm-cfg-range" ng-model="config.range">
+        <option value="24h">Last 24 hours</option>
+        <option value="7d">Last 7 days</option>
+        <option value="30d">Last 30 days</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="sm-cfg-refresh" class="control-label">Refresh interval (seconds)</label>
+      <input id="sm-cfg-refresh" type="number" class="form-control"
+             data-testid="sm-cfg-refresh" ng-model="config.refreshSecs"
+             min="10" step="10">
+    </div>
+  </div>
+
+  <div class="modal-footer">
+    <button id="sm-edit-save" type="submit" data-testid="sm-edit-save"
+            class="btn btn-sm btn-primary">
+      <i class="icon icon-check margin-right-sm"></i>Save
+    </button>
+    <button id="sm-edit-cancel" type="button" class="btn btn-sm btn-default"
+            data-testid="sm-edit-cancel" data-ng-click="cancel()">
+      <i class="icon icon-close margin-right-sm"></i>Close
+    </button>
+  </div>
+</form>

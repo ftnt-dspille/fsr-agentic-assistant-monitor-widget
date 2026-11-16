@@ -1,0 +1,75 @@
+<!-- Copyright start
+   MIT License
+   Copyright (c) 2026 Fortinet Inc
+   Copyright end -->
+<div class="sm-shift" data-testid="sm-shift">
+  <div class="sm-shift-bar">
+    <select class="sm-q-window" ng-model="shift.hours" ng-options="w.hours as w.label for w in SHIFT_WINDOWS"
+            ng-change="shiftWindowChanged()" aria-label="Shift window" data-testid="sm-shift-window"></select>
+    <div class="sm-shift-actions">
+      <span class="sm-hunt-note" ng-if="shift.notice" role="status" data-testid="sm-shift-notice">{{shift.notice}}</span>
+      <button type="button" class="sm-btn" ng-click="copyShift()" ng-disabled="!shiftText()" data-testid="sm-shift-copy"><i class="ic ic-list" aria-hidden="true"></i>Copy as text</button>
+      <button type="button" class="sm-btn" ng-click="exportShift()" ng-disabled="!shiftText()" data-testid="sm-shift-export"><i class="ic ic-arrow" aria-hidden="true"></i>Download</button>
+    </div>
+  </div>
+
+  <div class="sm-empty" ng-if="isPanelLoading('shift')" data-testid="sm-shift-loading">
+    <span class="sm-spinner"></span>
+    Writing the shift summary...
+  </div>
+  <div class="sm-empty" ng-if="panelFailed.shift && !isPanelLoading('shift')" data-testid="sm-shift-failed">
+    {{panelFailed.shift}} Refresh to try again.
+  </div>
+
+  <div ng-if="shift.digest">
+    <div class="sm-shift-grid" data-testid="sm-shift-handled">
+      <div class="sm-shift-stat"><b data-testid="sm-shift-triaged">{{shift.digest.handled.triaged}}</b><span>Cases triaged</span></div>
+      <div class="sm-shift-stat"><b data-testid="sm-shift-closed">{{shift.digest.handled.closed}}</b><span>Closed for you</span></div>
+      <div class="sm-shift-stat"><b data-testid="sm-shift-sent">{{shift.digest.handled.sent_to_you}}</b><span>Sent to you</span></div>
+      <div class="sm-shift-stat"><b data-testid="sm-shift-grouped">{{shift.digest.handled.grouped}}</b><span>Grouped under a lead</span></div>
+    </div>
+
+    <div class="sm-shift-sec" data-testid="sm-shift-waiting">
+      <div class="sm-section-title">Waiting for you ({{shift.digest.waiting.total}})</div>
+      <div class="sm-hunt-note" ng-if="!shift.digest.waiting.cases.length" data-testid="sm-shift-waiting-empty">Nothing is waiting on you.</div>
+      <ul ng-if="shift.digest.waiting.cases.length">
+        <li ng-repeat="c in shift.digest.waiting.cases track by $index" data-testid="sm-shift-waiting-item">
+          <span class="sm-prio" ng-if="c.priority" ng-class="'sm-prio-' + c.priority.toLowerCase()">{{c.priority}}</span>
+          <a ng-if="shiftHref(c.record_iri)" ng-href="{{shiftHref(c.record_iri)}}" target="_blank" rel="noopener">{{c.record_name || 'Unnamed case'}}</a>
+          <span ng-if="!shiftHref(c.record_iri)">{{c.record_name || 'Unnamed case'}}</span>
+          <span class="sm-q-sub" ng-if="c.reasons.length">{{c.reasons[0]}}</span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="sm-shift-sec" data-testid="sm-shift-notable">
+      <div class="sm-section-title">Notable verdicts ({{shift.digest.notable.total}})</div>
+      <div class="sm-hunt-note" ng-if="!shift.digest.notable.cases.length" data-testid="sm-shift-notable-empty">No confirmed or suspicious verdicts.</div>
+      <ul ng-if="shift.digest.notable.cases.length">
+        <li ng-repeat="c in shift.digest.notable.cases track by $index" data-testid="sm-shift-notable-item">
+          <a ng-if="shiftHref(c.record_iri)" ng-href="{{shiftHref(c.record_iri)}}" target="_blank" rel="noopener">{{c.record_name || 'Unnamed case'}}</a><span ng-if="!shiftHref(c.record_iri)">{{c.record_name || 'Unnamed case'}}</span><span>: {{c.verdict}}, {{shiftConfText(c)}} confident</span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="sm-shift-sec" data-testid="sm-shift-help">
+      <div class="sm-section-title">Would help most</div>
+      <div class="sm-hunt-note" ng-if="!shift.digest.would_help.items.length" data-testid="sm-shift-help-empty">
+        {{shift.digest.would_help.uncertain ? 'No missing or failing source held back the uncertain cases.' : 'No uncertain cases.'}}
+      </div>
+      <ul ng-if="shift.digest.would_help.items.length">
+        <li ng-repeat="i in shift.digest.would_help.items track by $index" data-testid="sm-shift-help-item">{{i.problem}}: {{helpCasesText(i).toLowerCase()}}</li>
+      </ul>
+    </div>
+
+    <div class="sm-shift-sec" data-testid="sm-shift-hunts">
+      <div class="sm-section-title">Scheduled hunts</div>
+      <div data-testid="sm-shift-hunts-line">{{shift.digest.hunts.runs}} {{shift.digest.hunts.runs === 1 ? 'run' : 'runs'}}: {{shift.digest.hunts.findings}} found something, {{shift.digest.hunts.quiet}} quiet, {{shift.digest.hunts.inconclusive}} inconclusive, {{shift.digest.hunts.failed}} failed.</div>
+      <ul ng-if="shift.digest.hunts.cases.length">
+        <li ng-repeat="f in shift.digest.hunts.cases track by $index" data-testid="sm-shift-hunt-item">
+          <a ng-if="shiftHref(f.case_iri)" ng-href="{{shiftHref(f.case_iri)}}" target="_blank" rel="noopener">{{f.hunt}}</a><span ng-if="!shiftHref(f.case_iri)">{{f.hunt}}</span><span>: {{f.summary || 'A finding'}}</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+</div>
