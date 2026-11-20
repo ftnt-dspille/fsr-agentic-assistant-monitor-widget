@@ -2,7 +2,7 @@
   "name": "agenticAssistantMonitor",
   "title": "Agentic Assistant Monitor",
   "subTitle": "Approvals, live sessions, usage and cost, autonomy policy, and audit trail for the Agentic Assistant.",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "published_date": 1753920000,
   "releaseNotes": "Initial release: usage/tokens/cost over time, pending HITL tasks, scheduled-task status, per-user activity, and an auditable LLM-call trail.",
   "development": true,
