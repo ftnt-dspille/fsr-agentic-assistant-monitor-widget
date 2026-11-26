@@ -58,7 +58,7 @@ function setup(opts) {
     $q = _$q_;
     const $interval = function () { return 0; };
     $interval.cancel = function () {};
-    _$controller_("agenticAssistantMonitor115DevCtrl", { $scope, config: { range: "7d", refreshSecs: 600 }, $interval, $q, fsrMonitorAgentService: svc });
+    _$controller_("agenticAssistantMonitor116DevCtrl", { $scope, config: { range: "7d", refreshSecs: 600 }, $interval, $q, fsrMonitorAgentService: svc });
   });
   $scope.$digest();
   return { $scope, calls };
