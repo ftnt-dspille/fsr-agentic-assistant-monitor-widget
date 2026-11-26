@@ -34,6 +34,13 @@ jobs:
         with:
           path: devkit/widgets-src/agenticAssistantMonitor
 
+      - name: Check out the chat widget (the harness's card and vocabulary suites read its renderer)
+        uses: actions/checkout@v4
+        with:
+          repository: ftnt-dspille/fsr-agentic-assistant-widget
+          ref: main
+          path: devkit/widgets-src/agenticAssistant
+
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
