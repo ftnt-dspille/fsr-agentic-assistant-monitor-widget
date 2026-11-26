@@ -6,15 +6,15 @@
 (function () {
   angular
     .module('cybersponse')
-    .controller('editAgenticAssistantMonitor116DevCtrl', editAgenticAssistantMonitor116DevCtrl);
+    .controller('editAgenticAssistantMonitor117DevCtrl', editAgenticAssistantMonitor117DevCtrl);
 
   // The dashboard opens this form with $uibModal and passes `config` and
   // `$uibModalInstance` as controller LOCALS. They are not injector services,
   // so $injector.get() throws for both and Save silently does nothing; they
   // must be listed in $inject. (KNOWLEDGEBASE.md 5.2)
-  editAgenticAssistantMonitor116DevCtrl.$inject = ['$scope', '$uibModalInstance', 'config'];
+  editAgenticAssistantMonitor117DevCtrl.$inject = ['$scope', '$uibModalInstance', 'config'];
 
-  function editAgenticAssistantMonitor116DevCtrl($scope, $uibModalInstance, config) {
+  function editAgenticAssistantMonitor117DevCtrl($scope, $uibModalInstance, config) {
     var defaults = { title: 'Agentic Assistant Monitor', range: '7d', refreshSecs: 60 };
     $scope.config = angular.extend({}, defaults, config || {});
 
